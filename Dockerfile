@@ -1,13 +1,9 @@
-# Utilise une image de base Ubuntu, reconnue pour sa stabilité.
-FROM ubuntu:22.04
+FROM mirror.gcr.io/library/ubuntu:22.04
 
-# Rend l'installation non interactive pour éviter les blocages.
 ENV DEBIAN_FRONTEND=noninteractive
-
-# Définit un répertoire de travail pour une meilleure organisation.
 WORKDIR /app
 
-# --- Installation des dépendances du système ---
+# --- Dépendances système ---
 RUN apt-get update && apt-get install -y \
     software-properties-common \
     gnupg \
@@ -17,35 +13,43 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     git \
     build-essential \
+    libgdal-dev \
+    libqt5gui5 \
+    libqt5core5a \
+    libqt5printsupport5 \
+    libqt5svg5 \
+    fonts-dejavu-core \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
-# --- Ajout du dépôt de QGIS pour obtenir les paquets officiels ---
-# Ajoute la clé GPG et le dépôt officiel de QGIS pour Ubuntu.
+# --- Dépôt QGIS ---
 RUN wget -O - https://qgis.org/downloads/qgis-archive-keyring.gpg | gpg --dearmor | tee /etc/apt/keyrings/qgis-archive-keyring.gpg > /dev/null
-RUN echo "deb [signed-by=/etc/apt/keyrings/qgis-archive-keyring.gpg] https://qgis.org/ubuntu jammy main" | tee /etc/apt/sources.list.d/qgis.list
-RUN echo "deb-src [signed-by=/etc/apt/keyrings/qgis-archive-keyring.gpg] https://qgis.org/ubuntu jammy main" | tee -a /etc/apt/sources.list.d/qgis.list
+RUN echo "deb [signed-by=/etc/apt/keyrings/qgis-archive-keyring.gpg] https://qgis.org/ubuntu jammy main" > /etc/apt/sources.list.d/qgis.list
 
-# --- Installation des paquets QGIS ---
-# Rend la commande plus résiliente aux erreurs de téléchargement
-# et installe les paquets essentiels pour le mode headless.
+# --- Installer QGIS ---
 RUN apt-get update || (sleep 10 && apt-get update) \
     && apt-get install -y \
+    qgis \
     qgis-server \
     qgis-plugin-grass \
-    libgdal-dev \
     python3-qgis \
     qgis-providers \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# --- Configuration de l'environnement Python ---
-# Indique à QGIS où trouver ses bibliothèques (obligatoire en mode headless).
+# --- Variables d'environnement QGIS ---
 ENV QGIS_PREFIX_PATH="/usr"
+ENV PYTHONPATH=/usr/share/qgis/python
+ENV QT_QPA_PLATFORM=offscreen
+ENV QT_DEBUG_PLUGINS=0
 
-# Copier ton code API dans /app
+# Copier ton code
 COPY . /app
 
-# Installer dépendances Python
+# Installer requirements Python
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Démarrage de l’API
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python3", "manage.py", "runserver", "0.0.0.0:10000"]

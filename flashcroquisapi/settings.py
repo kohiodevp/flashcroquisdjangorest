@@ -38,8 +38,22 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    "rest_framework"
+    "rest_framework",
+    "drf_spectacular",
+    "flashcroquisapi",
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'FlashCroquis API',
+    'DESCRIPTION': 'API pour la génération de croquis cadastraux avec QGIS',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
